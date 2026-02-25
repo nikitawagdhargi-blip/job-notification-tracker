@@ -10,5 +10,8 @@ export { ContextHeader } from './ContextHeader';
 export { Workspace } from './Workspace';
 export { ProofFooter } from './ProofFooter';
 
+// Navigation
+export { Navigation } from './Navigation';
+
 // Showcase
 export { DesignSystemShowcase } from './DesignSystemShowcase';
