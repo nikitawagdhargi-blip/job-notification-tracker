@@ -5,6 +5,7 @@ import { Button, Badge } from './index';
 interface JobCardProps {
   job: Job;
   isSaved: boolean;
+  matchScore?: number;
   onView: (job: Job) => void;
   onSave: (jobId: string) => void;
   onApply: (url: string) => void;
@@ -13,6 +14,7 @@ interface JobCardProps {
 export const JobCard: React.FC<JobCardProps> = ({
   job,
   isSaved,
+  matchScore,
   onView,
   onSave,
   onApply,
@@ -118,6 +120,20 @@ export const JobCard: React.FC<JobCardProps> = ({
     }
   };
 
+  const getMatchScoreColor = (score: number): string => {
+    if (score >= 80) return 'var(--color-success)';
+    if (score >= 60) return 'var(--color-warning)';
+    if (score >= 40) return 'var(--color-text-secondary)';
+    return 'var(--color-text-muted)';
+  };
+
+  const getMatchScoreBg = (score: number): string => {
+    if (score >= 80) return 'rgba(90, 125, 90, 0.1)';
+    if (score >= 60) return 'rgba(184, 134, 11, 0.1)';
+    if (score >= 40) return 'var(--color-border-subtle)';
+    return 'var(--color-border-subtle)';
+  };
+
   return (
     <div style={cardStyle}>
       <div style={headerStyle}>
@@ -125,7 +141,24 @@ export const JobCard: React.FC<JobCardProps> = ({
           <h3 style={titleStyle}>{job.title}</h3>
           <p style={companyStyle}>{job.company}</p>
         </div>
-        <Badge variant={getSourceVariant(job.source)}>{job.source}</Badge>
+        <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'flex-end', gap: 'var(--space-8)' }}>
+          {matchScore !== undefined && (
+            <span
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: getMatchScoreColor(matchScore),
+                backgroundColor: getMatchScoreBg(matchScore),
+                padding: '4px 10px',
+                borderRadius: 'var(--border-radius)',
+              }}
+            >
+              {matchScore}% Match
+            </span>
+          )}
+          <Badge variant={getSourceVariant(job.source)}>{job.source}</Badge>
+        </div>
       </div>
 
       <div style={metaRowStyle}>

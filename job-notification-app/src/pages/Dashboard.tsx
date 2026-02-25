@@ -1,14 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { jobs } from '../data/jobs';
 import type { Job } from '../data/jobs';
-import { JobCard, JobModal, FilterBar } from '../components';
+import { JobCard, JobModal, FilterBar, Button, Card } from '../components';
 import type { FilterState } from '../components';
 import { useSavedJobs } from '../hooks/useSavedJobs';
+import { usePreferences } from '../hooks/usePreferences';
+import { calculateMatchScore } from '../utils/matchScore';
 
 export const Dashboard: React.FC = () => {
   const { savedJobIds, toggleSaveJob, isJobSaved } = useSavedJobs();
+  const { preferences, hasPreferences, isLoaded: preferencesLoaded } = usePreferences();
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showOnlyMatches, setShowOnlyMatches] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     keyword: '',
     location: '',
@@ -66,9 +70,61 @@ export const Dashboard: React.FC = () => {
     lineHeight: 'var(--line-height-body)',
   };
 
+  const bannerStyle: React.CSSProperties = {
+    backgroundColor: 'rgba(139, 0, 0, 0.05)',
+    border: '1px solid var(--color-accent)',
+    borderRadius: 'var(--border-radius)',
+    padding: 'var(--space-16) var(--space-24)',
+    marginBottom: 'var(--space-24)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap' as const,
+    gap: 'var(--space-16)',
+  };
+
+  const bannerTextStyle: React.CSSProperties = {
+    fontFamily: 'var(--font-sans)',
+    fontSize: 'var(--font-size-body)',
+    color: 'var(--color-text-primary)',
+  };
+
+  const toggleContainerStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-16)',
+    flexWrap: 'wrap' as const,
+  };
+
+  const toggleLabelStyle: React.CSSProperties = {
+    fontFamily: 'var(--font-sans)',
+    fontSize: 'var(--font-size-body)',
+    color: 'var(--color-text-primary)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-8)',
+    cursor: 'pointer',
+  };
+
+  const checkboxStyle: React.CSSProperties = {
+    width: '18px',
+    height: '18px',
+    cursor: 'pointer',
+    accentColor: 'var(--color-accent)',
+  };
+
+  // Calculate match scores for all jobs
+  const jobsWithScores = useMemo(() => {
+    if (!preferencesLoaded) return [];
+    return jobs.map((job) => ({
+      job,
+      matchResult: calculateMatchScore(job, preferences),
+    }));
+  }, [preferences, preferencesLoaded]);
+
   // Filter and sort jobs
   const filteredJobs = useMemo(() => {
-    let result = jobs.filter((job) => {
+    let result = jobsWithScores.filter(({ job, matchResult }) => {
       // Keyword filter (title or company)
       if (filters.keyword) {
         const keyword = filters.keyword.toLowerCase();
@@ -89,16 +145,24 @@ export const Dashboard: React.FC = () => {
       // Source filter
       if (filters.source && job.source !== filters.source) return false;
 
+      // Show only matches filter
+      if (showOnlyMatches && matchResult.score < preferences.minMatchScore) {
+        return false;
+      }
+
       return true;
     });
 
     // Sort jobs
     switch (filters.sort) {
       case 'latest':
-        result = result.sort((a, b) => a.postedDaysAgo - b.postedDaysAgo);
+        result = result.sort((a, b) => a.job.postedDaysAgo - b.job.postedDaysAgo);
         break;
       case 'oldest':
-        result = result.sort((a, b) => b.postedDaysAgo - a.postedDaysAgo);
+        result = result.sort((a, b) => b.job.postedDaysAgo - a.job.postedDaysAgo);
+        break;
+      case 'match-score':
+        result = result.sort((a, b) => b.matchResult.score - a.matchResult.score);
         break;
       case 'salary-high':
         // Simple sort by extracting first number from salary range
@@ -107,7 +171,7 @@ export const Dashboard: React.FC = () => {
             const match = salary.match(/(\d+)/);
             return match ? parseInt(match[1]) : 0;
           };
-          return getMinSalary(b.salaryRange) - getMinSalary(a.salaryRange);
+          return getMinSalary(b.job.salaryRange) - getMinSalary(a.job.salaryRange);
         });
         break;
       case 'salary-low':
@@ -116,13 +180,13 @@ export const Dashboard: React.FC = () => {
             const match = salary.match(/(\d+)/);
             return match ? parseInt(match[1]) : 0;
           };
-          return getMinSalary(a.salaryRange) - getMinSalary(b.salaryRange);
+          return getMinSalary(a.job.salaryRange) - getMinSalary(b.job.salaryRange);
         });
         break;
     }
 
     return result;
-  }, [filters]);
+  }, [filters, jobsWithScores, showOnlyMatches, preferences.minMatchScore]);
 
   const handleView = (job: Job) => {
     setSelectedJob(job);
@@ -146,6 +210,33 @@ export const Dashboard: React.FC = () => {
     <div style={containerStyle}>
       <h1 style={headlineStyle}>Dashboard</h1>
 
+      {!hasPreferences && preferencesLoaded && (
+        <div style={bannerStyle}>
+          <span style={bannerTextStyle}>
+            Set your preferences to activate intelligent matching.
+          </span>
+          <Button variant="primary" size="sm" onClick={() => window.location.href = '/settings'}>
+            Go to Settings
+          </Button>
+        </div>
+      )}
+
+      {hasPreferences && (
+        <div style={bannerStyle}>
+          <div style={toggleContainerStyle}>
+            <label style={toggleLabelStyle}>
+              <input
+                type="checkbox"
+                checked={showOnlyMatches}
+                onChange={(e) => setShowOnlyMatches(e.target.checked)}
+                style={checkboxStyle}
+              />
+              Show only jobs above my threshold ({preferences.minMatchScore}%)
+            </label>
+          </div>
+        </div>
+      )}
+
       <FilterBar filters={filters} onFilterChange={setFilters} />
 
       <p style={resultsCountStyle}>
@@ -153,15 +244,22 @@ export const Dashboard: React.FC = () => {
       </p>
 
       {filteredJobs.length === 0 ? (
-        <div style={emptyStateStyle}>
-          <p style={emptyTextStyle}>No jobs match your search.</p>
-        </div>
+        <Card>
+          <div style={emptyStateStyle}>
+            <p style={emptyTextStyle}>
+              {showOnlyMatches
+                ? 'No roles match your criteria. Adjust filters or lower threshold.'
+                : 'No jobs match your search.'}
+            </p>
+          </div>
+        </Card>
       ) : (
         <div style={gridStyle}>
-          {filteredJobs.map((job) => (
+          {filteredJobs.map(({ job, matchResult }) => (
             <JobCard
               key={job.id}
               job={job}
+              matchScore={matchResult.score}
               isSaved={isJobSaved(job.id)}
               onView={handleView}
               onSave={handleSave}
