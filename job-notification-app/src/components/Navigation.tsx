@@ -7,7 +7,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { path: '/', label: 'Dashboard' },
+  { path: '/dashboard', label: 'Dashboard' },
   { path: '/saved', label: 'Saved' },
   { path: '/digest', label: 'Digest' },
   { path: '/settings', label: 'Settings' },

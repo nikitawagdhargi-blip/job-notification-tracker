@@ -1,4 +1,5 @@
 import React from 'react';
+import { Card } from '../components';
 
 export const Proof: React.FC = () => {
   const containerStyle: React.CSSProperties = {
@@ -21,12 +22,20 @@ export const Proof: React.FC = () => {
     fontSize: 'var(--font-size-body)',
     color: 'var(--color-text-secondary)',
     lineHeight: 'var(--line-height-body)',
+    marginBottom: 'var(--space-24)',
   };
 
   return (
     <div style={containerStyle}>
       <h1 style={headlineStyle}>Proof</h1>
-      <p style={subtextStyle}>This section will be built in the next step.</p>
+      <p style={subtextStyle}>
+        Artifact collection and verification workspace.
+      </p>
+      <Card>
+        <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>
+          This area will contain proof of work artifacts and documentation.
+        </p>
+      </Card>
     </div>
   );
 };

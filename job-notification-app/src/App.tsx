@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Navigation } from './components';
 import {
+  Landing,
   Dashboard,
   Saved,
   Digest,
@@ -27,7 +28,8 @@ function App() {
         <Navigation />
         <main style={mainStyle}>
           <Routes>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Landing />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/saved" element={<Saved />} />
             <Route path="/digest" element={<Digest />} />
             <Route path="/settings" element={<Settings />} />
